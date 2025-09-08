@@ -259,6 +259,62 @@ function Fader {
 	return "file '$fade_file'"
 }
 
+function Get-ProcessedFiles {
+	param (
+		[string]$TempDir,
+		[string]$Fade,
+		[string]$FileBitrate,
+		[string]$LibCodec
+	)
+
+	$split_files = @(Get-Splits -TempDir $TempDir)
+	$fade_types = Get-FadeTypes -Fade $Fade
+	$files = @()
+
+	if ($fade_types -contains "start") {
+		$fade_dur = Get-FadeDuration -Fade $Fade
+		$path = $split_files[0].FullName
+		$fade_file = Fader -Path $path -FadeIn $true -FadeOut $false -FadeDur $fade_dur -FileBitrate $FileBitrate -LibCodec $LibCodec -TempDir $TempDir -Idx 0
+
+		$files += "$fade_file"
+	}
+
+	if ($fade_types -contains "in" -or $fade_types -contains "out") {
+		$fade_in = $fade_types -contains "in"
+		$fade_out = $fade_types -contains "out"
+		$fade_dur = Get-FadeDuration -Fade $Fade
+
+		$idx = if ($fade_types -contains "start") { 1 } else { 0 }
+		$length = if ($fade_types -contains "end") { $split_files.length - 1 } else { $split_files.length }
+
+		for ($idx; $idx -lt $length; $idx++) {
+			$path = $split_files[$idx].FullName
+
+			$fade_file = Fader -Path $path -FadeIn $fade_in -FadeOut $fade_out -FadeDur $fade_dur -FileBitrate $FileBitrate -LibCodec $LibCodec -TempDir $TempDir -Idx $idx
+
+			$files += "$fade_file"
+		}
+	} else {
+		$idx = if ($fade_types -contains "start") { 1 } else { 0 }
+		$length = if ($fade_types -contains "end") { $split_files.length - 1 } else { $split_files.length }
+
+		for ($idx; $idx -lt $length; $idx++) {
+			$files += "file '$($split_files[$idx].Name)'"
+		}
+	}
+
+	if ($fade_types -contains "end") {
+		$idx = ($split_files.length - 1)
+		$fade_dur = Get-FadeDuration -Fade $Fade
+		$path = $split_files[$idx].FullName
+		$fade_file = Fader -Path $path -FadeIn $false -FadeOut $true -FadeDur $fade_dur -FileBitrate $FileBitrate -LibCodec $LibCodec -TempDir $TempDir -Idx $idx
+
+		$files += "$fade_file"
+	}
+
+	return $files
+}
+
 function Main {
 	$file = Get-InputFile -Path "$i"
 	$file_bitrate = Get-FileBitrate -Path "$i"
@@ -268,59 +324,10 @@ function Main {
 	$temp_dir = Get-TempDir -Path $edited_dir
 
 	Split-File -Path "$i" -Timestamps $timestamps
-
-	# Add fade in/out for splits.
-
-	$files = @()
-
-	# Wrap in an array to always get back an array. Get-ChildItem returns a single object if only
-	# one file is found, and an array if multiple are found.
-	$split_files = @(Get-Splits -TempDir $temp_dir)
-	$fade_types = Get-FadeTypes -Fade $fade
-
-	if ($fade_types -contains "start") {
-		$fade_dur = Get-FadeDuration -Fade $fade
-		$path = $split_files[0].FullName
-		$fade_file = Fader -Path $path -FadeIn $true -FadeOut $false -FadeDur $fade_dur -FileBitrate $file_bitrate -LibCodec $lib_codec -TempDir $temp_dir -Idx 0
-
-		$files += "$fade_file"
-	}
-
-	if ($fade_types -contains "in" -or $fade_types -contains "out") {
-		$fade_in = $fade_types -contains "in"
-		$fade_out = $fade_types -contains "out"
-		$fade_dur = Get-FadeDuration -Fade $fade
-
-		$idx = if ($fade_types -contains "start") { 1 } else { 0 }
-		$length = if ($fade_types -contains "end") { $split_files.length - 1 } else { $split_files.length }
-
-		for ($idx; $idx -lt $length; $idx++) {
-			$path = $split_files[$idx].FullName
-
-			$fade_file = Fader -Path $path -FadeIn $fade_in -FadeOut $fade_out -FadeDur $fade_dur -FileBitrate $file_bitrate -LibCodec $lib_codec -TempDir $temp_dir -Idx $idx
-
-			$files += "$fade_file"
-		}
-	} else {
-		$idx = if ($fade_types -contains "start") { 1 } else { 0 }
-		$length = if ($fade_types -contains "end") { $split_files.length - 1 } else { $split_files.length }
-		
-		for ($idx; $idx -lt $length; $idx++) {
-			$files += "file '$($split_files[$idx].Name)'"
-		}
-	}
-
-	if ($fade_types -contains "end") {
-		$idx = ($split_files.length - 1)
-		$fade_dur = Get-FadeDuration -Fade $fade
-		$path = $split_files[$idx].FullName
-		$fade_file = Fader -Path $path -FadeIn $false -FadeOut $true -FadeDur $fade_dur -FileBitrate $file_bitrate -LibCodec $lib_codec -TempDir $temp_dir -Idx $idx
-
-		$files += "$fade_file"
-	}
+	$processed_files = Get-ProcessedFiles -TempDir $temp_dir -Fade $fade -FileBitrate $file_bitrate -LibCodec $lib_codec
 
 	if (!(Test-Path -Path "$temp_dir\files.txt")) {
-		$null = New-Item -Path "$temp_dir" -Name "files.txt" -ItemType "File" -Value $($files | Out-String)
+		$null = New-Item -Path "$temp_dir" -Name "files.txt" -ItemType "File" -Value $($processed_files | Out-String)
 	}
 
 	ffmpeg -f concat -i "$temp_dir\files.txt" -c copy "$edited_dir\$($file.Name)"
