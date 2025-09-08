@@ -238,6 +238,10 @@ function Get-InputFile {
 	return $file
 }
 
+# .DESCRIPTION
+#
+# Applies fade effects to a given audio file based on specified parameters.
+# Returns the file object of the faded audio file.
 function Fader {
 	param (
 		[string]$Path,
@@ -256,9 +260,13 @@ function Fader {
 
 	Add-Fade -InputPath $Path -FadeAlgo $fade_algo -Bitrate $FileBitrate -Codec $LibCodec -OutputPath "$TempDir\$fade_file"
 
-	return "file '$fade_file'"
+	return Get-Item "$TempDir\$fade_file"
 }
 
+# .DESCRIPTION
+#
+# Processes split files by applying fade effects as specified.
+# Returns an array of strings formatted for ffmpeg concatenation.
 function Get-ProcessedFiles {
 	param (
 		[string]$TempDir,
@@ -276,7 +284,7 @@ function Get-ProcessedFiles {
 		$path = $split_files[0].FullName
 		$fade_file = Fader -Path $path -FadeIn $true -FadeOut $false -FadeDur $fade_dur -FileBitrate $FileBitrate -LibCodec $LibCodec -TempDir $TempDir -Idx 0
 
-		$files += "$fade_file"
+		$files += "file '$($fade_file.Name)'"
 	}
 
 	if ($fade_types -contains "in" -or $fade_types -contains "out") {
@@ -292,7 +300,7 @@ function Get-ProcessedFiles {
 
 			$fade_file = Fader -Path $path -FadeIn $fade_in -FadeOut $fade_out -FadeDur $fade_dur -FileBitrate $FileBitrate -LibCodec $LibCodec -TempDir $TempDir -Idx $idx
 
-			$files += "$fade_file"
+			$files += "file '$($fade_file.Name)'"
 		}
 	} else {
 		$idx = if ($fade_types -contains "start") { 1 } else { 0 }
@@ -309,10 +317,48 @@ function Get-ProcessedFiles {
 		$path = $split_files[$idx].FullName
 		$fade_file = Fader -Path $path -FadeIn $false -FadeOut $true -FadeDur $fade_dur -FileBitrate $FileBitrate -LibCodec $LibCodec -TempDir $TempDir -Idx $idx
 
-		$files += "$fade_file"
+		$files += "file '$($fade_file.Name)'"
 	}
 
 	return $files
+}
+
+# .DESCRIPTION
+#
+# Creates a text file listing all processed files for ffmpeg concatenation.
+function CreateConcatenationFile {
+	param (
+		[string]$TempDir,
+		[string[]]$ProcessedFiles
+	)
+
+	if (!(Test-Path -Path "$TempDir\files.txt")) {
+		$null = New-Item -Path "$TempDir" -Name "files.txt" -ItemType "File" -Value $($ProcessedFiles | Out-String)
+	}
+}
+
+# .DESCRIPTION
+#
+# Concatenates processed audio files into a single output file using ffmpeg.
+function ConcatenateTemporaryFiles {
+	param (
+		[string]$TempDir,
+		[string]$EditedDir,
+		[string]$FileName
+	)
+
+	ffmpeg -f concat -i "$TempDir\files.txt" -c copy "$EditedDir\$FileName"
+}
+
+# .DESCRIPTION
+#
+# Removes the temporary directory and its contents.
+function RemoveTemporaryFiles {
+	param (
+		[string]$TempDir
+	)
+
+	Remove-Item $TempDir -Recurse
 }
 
 function Main {
@@ -324,15 +370,12 @@ function Main {
 	$temp_dir = Get-TempDir -Path $edited_dir
 
 	Split-File -Path "$i" -Timestamps $timestamps
+	
 	$processed_files = Get-ProcessedFiles -TempDir $temp_dir -Fade $fade -FileBitrate $file_bitrate -LibCodec $lib_codec
 
-	if (!(Test-Path -Path "$temp_dir\files.txt")) {
-		$null = New-Item -Path "$temp_dir" -Name "files.txt" -ItemType "File" -Value $($processed_files | Out-String)
-	}
-
-	ffmpeg -f concat -i "$temp_dir\files.txt" -c copy "$edited_dir\$($file.Name)"
-
-	Remove-Item $temp_dir -Recurse
+	CreateConcatenationFile -TempDir $temp_dir -ProcessedFiles $processed_files
+	ConcatenateTemporaryFiles -TempDir $temp_dir -EditedDir $edited_dir -FileName $file.Name
+	RemoveTemporaryFiles -TempDir $temp_dir
 }
 
 Main
