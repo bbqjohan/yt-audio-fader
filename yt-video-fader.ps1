@@ -1,13 +1,8 @@
 # TODO
 #
-# - The code that fades start, end, in/out is almost identical. Refactor to reduce redundancy.
 # - Add error handling for ffmpeg/ffprobe commands.
 # - Add option to add text file with file names and timestamps to process files in bulk.
-# - Add option to specify fade at the start of the file, end of the file, or both.
 # - Add option to not have fade at the start of the file, end of the file, or both.
-
-# Testing data
-# "ss=00:02:40,to=00:04:40","ss=00:16:37,to=01:31:21","ss=01:50:00,to=03:15:05"
 
 param (
 	[Parameter(Mandatory)]$i,
@@ -370,7 +365,7 @@ function Main {
 	$temp_dir = Get-TempDir -Path $edited_dir
 
 	Split-File -Path "$i" -Timestamps $timestamps
-	
+
 	$processed_files = Get-ProcessedFiles -TempDir $temp_dir -Fade $fade -FileBitrate $file_bitrate -LibCodec $lib_codec
 
 	CreateConcatenationFile -TempDir $temp_dir -ProcessedFiles $processed_files
