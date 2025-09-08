@@ -1,4 +1,4 @@
-# Yt-Video-Fader
+# Yt-Audio-Fader
 
 This script can be used to split an audio file into segments and merge them together, discarding portions of the audio file that you don't want. Fades can be added in between segments to make the jumps feel more natural.
 
