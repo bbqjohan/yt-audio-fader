@@ -45,17 +45,17 @@ If the `-fade` argument is not used, no fades will be applied to the segments.
 
 ## Examples
 
-`.\yt-video-fade.ps1 -i ".\my-file.webm" -timestamps "ss=00:01:00,to=00:02:00"`
+`.\yt-audio-fader.ps1 -i ".\my-file.webm" -timestamps "ss=00:01:00,to=00:02:00"`
 Outputs a one minute long segments from 00:01:00 to 00:02:00. No fades applied.
 
-`.\yt-video-fade.ps1 -i ".\my-file.webm" -timestamps "ss=00:01:00,to=00:02:00","ss=00:05:00,to=00:10:00","ss=00:13:00,to=00:15:00"`
+`.\yt-audio-fader.ps1 -i ".\my-file.webm" -timestamps "ss=00:01:00,to=00:02:00","ss=00:05:00,to=00:10:00","ss=00:13:00,to=00:15:00"`
 Segments the file into the specified timestamps, and outputs a file merged from those segments. No fades applied.
 
-`.\yt-video-fade.ps1 -i ".\my-file.webm" -timestamps "ss=00:01:00,to=00:02:00","ss=00:05:00,to=00:10:00","ss=00:13:00"`
+`.\yt-audio-fader.ps1 -i ".\my-file.webm" -timestamps "ss=00:01:00,to=00:02:00","ss=00:05:00,to=00:10:00","ss=00:13:00"`
 The last timestamp will make it so that the last segment will last from minute 00:13:00 to the end of the file. No fades applied.
 
-`.\yt-video-fade.ps1 -i ".\my-file.webm" -timestamps "ss=00:01:00,to=00:02:00","ss=00:05:00,to=00:10:00" -fade "in,out,duration=3"`
+`.\yt-audio-fader.ps1 -i ".\my-file.webm" -timestamps "ss=00:01:00,to=00:02:00","ss=00:05:00,to=00:10:00" -fade "in,out,duration=3"`
 Apply a fade in/out to every segment with a 3 second duration.
 
-`.\yt-video-fade.ps1 -i ".\my-file.webm" -timestamps "ss=00:01:00"`
+`.\yt-audio-fader.ps1 -i ".\my-file.webm" -timestamps "ss=00:01:00"`
 A lone seek time can be used as well, and will in this case segment the file from 00:01:00 to the end of the file.
