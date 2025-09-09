@@ -37,11 +37,11 @@ These options can be used by themselves, or combined however you wish and behave
 `"in,out"` - Applies fade in/out to every segment.
 `"duration=5` - Applies a 5 second fade duration to every fade.
 
-A complete fade example:
+A complete example:
 
 `-fade "in,out,duration=3"`
 
-If none of the options are used, then there will be no fades applied to the segments.
+If the `-fade` argument is not used, no fades will be applied to the segments.
 
 ## Examples
 
